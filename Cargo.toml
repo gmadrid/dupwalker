@@ -1,0 +1,13 @@
+[package]
+name = "dupwalker"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+
+[dependencies]
+argh = "0.1.10"
+crossbeam-channel = "0.5.7"
+ignore = "0.4.20"
