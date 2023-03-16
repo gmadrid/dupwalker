@@ -15,7 +15,6 @@ fn first_or_default<T: Default>(mut i: impl Iterator<Item = T>) -> T {
 
 #[get("/world")]
 fn test_foo(status_sndr: StatusMsgSender) -> String {
-    status_sndr.noop();
     first_or_default(status_sndr.test().iter())
 }
 
@@ -66,8 +65,7 @@ impl Engine {
 
         let file_recv = file_walker::start(roots);
         let loader_recv = image_loader::start(file_recv);
-
-        let _done_recv = hasher::start(loader_recv, status_sndr);
+        hasher::start(loader_recv, status_sndr);
 
         start_rocket().unwrap();
     }
