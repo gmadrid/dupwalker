@@ -11,10 +11,10 @@ fn skip_lightroom(entry: &DirEntry) -> bool {
         .unwrap_or(true)
 }
 
-pub fn start(roots: &Vec<PathBuf>) -> Receiver<PathBuf> {
+pub fn start(roots: &[PathBuf]) -> Receiver<PathBuf> {
     let (sender, receiver) = crossbeam_channel::bounded(100);
 
-    let mut builder = WalkBuilder::new(roots.first().unwrap_or(&".".into()).to_path_buf());
+    let mut builder = WalkBuilder::new(roots.first().unwrap_or(&".".into()));
     roots.iter().skip(1).for_each(|p| {
         builder.add(p);
     });
@@ -25,12 +25,17 @@ pub fn start(roots: &Vec<PathBuf>) -> Receiver<PathBuf> {
         for entry in builder
             .filter_entry(skip_lightroom)
             .build()
-            .into_iter()
             .filter_map(|r| r.ok())
         {
-            // Don't send any directory names.
-            if !entry.metadata().map(|e| e.is_dir()).unwrap_or_default() {
-                sender.send(entry.into_path()).unwrap();
+            // Don't send any directory names or non-Image files.
+            if !entry.metadata().map(|e| e.is_dir()).unwrap_or_default()
+                && mime_guess::from_path(entry.path())
+                    .iter()
+                    .any(|m| m.type_() == mime::IMAGE)
+            {
+                sender
+                    .send(entry.into_path().canonicalize().unwrap())
+                    .unwrap();
             }
         }
     });
