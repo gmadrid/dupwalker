@@ -1,6 +1,5 @@
 use crossbeam_channel::Sender;
 use std::collections::HashMap;
-use std::io::Write;
 use std::path::PathBuf;
 use std::thread;
 

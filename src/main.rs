@@ -11,5 +11,5 @@ struct Args {
 
 fn main() {
     let args: Args = argh::from_env();
-    dupwalker::init_engine().run(&args.directories);
+    dupwalker::Engine.run(&args.directories);
 }
