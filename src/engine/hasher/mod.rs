@@ -25,6 +25,7 @@ pub fn start(
 
         for (path, image) in image_recv {
             let shared_path = Arc::new(path);
+            let shared_image = Arc::new(image);
             dhash_sndr
                 .send((shared_path.clone(), image.clone()))
                 .unwrap();
