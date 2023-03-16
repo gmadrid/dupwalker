@@ -7,12 +7,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
 
-pub fn start(status_sndr: Sender<StatusMgrMsg>) -> Sender<(Arc<PathBuf>, DynamicImage)> {
+pub fn start(status_sndr: Sender<StatusMgrMsg>) -> Sender<(Arc<PathBuf>, Arc<DynamicImage>)> {
     let (sender, receiver) = crossbeam_channel::bounded(10);
 
     thread::spawn(move || {
-        for (pathbuf, image) in receiver {
-            let hash = dhash(&image);
+        for (pathbuf, shared_image) in receiver {
+            let hash = dhash(Arc::as_ref(&shared_image));
 
             status_sndr.send(DHash(pathbuf, hash)).unwrap();
         }

@@ -27,10 +27,10 @@ pub fn start(
             let shared_path = Arc::new(path);
             let shared_image = Arc::new(image);
             dhash_sndr
-                .send((shared_path.clone(), image.clone()))
+                .send((shared_path.clone(), shared_image.clone()))
                 .unwrap();
             ahash_sndr
-                .send((shared_path.clone(), image.clone()))
+                .send((shared_path.clone(), shared_image.clone()))
                 .unwrap();
         }
 
