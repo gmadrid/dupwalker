@@ -1,17 +1,18 @@
 use crossbeam_channel::Sender;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::thread;
 
 pub enum StatusMgrMsg {
     //NoOp,
-    AHash(PathBuf, u64),
-    DHash(PathBuf, u64),
+    AHash(Arc<PathBuf>, u64),
+    DHash(Arc<PathBuf>, u64),
 }
 
 #[derive(Default)]
 pub struct StatusMgr {
-    data: HashMap<PathBuf, ImageData>,
+    data: HashMap<Arc<PathBuf>, ImageData>,
 }
 
 #[derive(Default, Debug)]

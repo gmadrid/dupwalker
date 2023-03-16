@@ -6,6 +6,7 @@ use crate::engine::status_mgr::StatusMgrMsg;
 use crossbeam_channel::{Receiver, Sender};
 use image::DynamicImage;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::thread;
 
 mod ahasher;
@@ -23,8 +24,13 @@ pub fn start(
         let ahash_sndr = ahasher::start(status_sndr.clone());
 
         for (path, image) in image_recv {
-            dhash_sndr.send((path.clone(), image.clone())).unwrap();
-            ahash_sndr.send((path.clone(), image.clone())).unwrap();
+            let shared_path = Arc::new(path);
+            dhash_sndr
+                .send((shared_path.clone(), image.clone()))
+                .unwrap();
+            ahash_sndr
+                .send((shared_path.clone(), image.clone()))
+                .unwrap();
         }
 
         sender.send(()).unwrap();

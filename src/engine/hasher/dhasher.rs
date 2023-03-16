@@ -1,12 +1,13 @@
 use crate::engine::status_mgr::StatusMgrMsg;
-use crate::engine::status_mgr::StatusMgrMsg::{DHash};
-use crossbeam_channel::{Sender};
+use crate::engine::status_mgr::StatusMgrMsg::DHash;
+use crossbeam_channel::Sender;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::thread;
 
-pub fn start(status_sndr: Sender<StatusMgrMsg>) -> Sender<(PathBuf, DynamicImage)> {
+pub fn start(status_sndr: Sender<StatusMgrMsg>) -> Sender<(Arc<PathBuf>, DynamicImage)> {
     let (sender, receiver) = crossbeam_channel::bounded(10);
 
     thread::spawn(move || {
