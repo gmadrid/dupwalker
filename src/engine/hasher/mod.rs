@@ -11,7 +11,6 @@ use std::thread;
 
 mod ahasher;
 mod dhasher;
-//mod fake_hasher;
 
 pub fn start(
     image_recv: Receiver<(PathBuf, DynamicImage)>,
@@ -20,8 +19,8 @@ pub fn start(
     let (sender, receiver) = crossbeam_channel::bounded(1);
 
     thread::spawn(move || {
-        let dhash_sndr = dhasher::start(status_sndr.clone());
-        let ahash_sndr = ahasher::start(status_sndr.clone());
+        let ahash_sndr = start_hasher(ahasher::ahash, StatusMgrMsg::AHash, status_sndr.clone());
+        let dhash_sndr = start_hasher(dhasher::dhash, StatusMgrMsg::DHash, status_sndr.clone());
 
         for (path, image) in image_recv {
             let shared_path = Arc::new(path);
@@ -38,4 +37,24 @@ pub fn start(
     });
 
     receiver
+}
+
+type HashFunc = fn(&DynamicImage) -> u64;
+type MsgFunc = fn(Arc<PathBuf>, u64) -> StatusMgrMsg;
+
+fn start_hasher(
+    hash_func: HashFunc,
+    msg_func: MsgFunc,
+    status_sndr: Sender<StatusMgrMsg>,
+) -> Sender<(Arc<PathBuf>, Arc<DynamicImage>)> {
+    let (sender, receiver) = crossbeam_channel::bounded(10);
+
+    thread::spawn(move || {
+        for (pathbuf, shared_image) in receiver {
+            let hash = hash_func(Arc::as_ref(&shared_image));
+            status_sndr.send(msg_func(pathbuf, hash)).unwrap();
+        }
+    });
+
+    sender
 }
