@@ -1,10 +1,5 @@
-[workspace]
-members = [
-  "server",
-]
-
 [package]
-name = "app"
+name = "dupwalker"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,5 +8,10 @@ edition = "2021"
 [lib]
 
 [dependencies]
-yew = { version = "0.20.0", features = ["csr"] }
-
+argh = "0.1.10"
+crossbeam-channel = "0.5.7"
+ignore = "0.4.20"
+image = "0.24.5"
+mime = "0.3.16"
+mime_guess = "2.0.4"
+rocket = "0.5.0-rc.2"

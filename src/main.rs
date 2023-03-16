@@ -1,15 +1,12 @@
-use argh::FromArgs;
-use std::path::PathBuf;
+use yew::prelude::*;
 
-/// Tool to find near-duplicates
-#[derive(FromArgs)]
-struct Args {
-    /// the directories to walk.
-    #[argh(positional)]
-    directories: Vec<PathBuf>,
+#[function_component]
+fn App() -> Html {
+    html!{
+        <div><b>{"Hi, George!"}</b></div>
+    }
 }
 
 fn main() {
-    let args: Args = argh::from_env();
-    dupwalker::Engine.run(&args.directories);
+    yew::Renderer::<App>::new().render();
 }
