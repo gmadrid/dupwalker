@@ -42,7 +42,7 @@ pub fn start() -> Sender<StatusMgrMsg> {
                     mgr.data.entry(pathbuf).or_default().d_hash = Some(hsh);
                 }
                 StatusMgrMsg::TestMsg(sndr) => {
-                    let s = format!("Processed: {}", mgr.data.len());
+                    let s = format!("{}", mgr.data.len());
                     sndr.send(s).unwrap();
                 }
             }

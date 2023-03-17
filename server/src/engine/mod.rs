@@ -2,6 +2,7 @@ use crate::engine::status_mgr::StatusMgrMsg;
 use crossbeam_channel::{Receiver, Sender};
 use rocket::{routes, State};
 use std::path::PathBuf;
+use rocket::fs::FileServer;
 use rocket::response::Redirect;
 
 mod file_walker;
@@ -15,14 +16,14 @@ fn first_or_default<T: Default>(recv: Receiver<T>) -> T {
 
 #[get("/")]
 fn root() -> Redirect {
-    Redirect::to(uri!(app_root()))
+    Redirect::to("/app")
 }
 
-#[get("/app")]
-fn app_root(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
+#[get("/count")]
+fn api_count(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
     let (sndr, recv) = crossbeam_channel::bounded(1);
     (*status_sndr).clone().send(StatusMgrMsg::TestMsg(sndr)).unwrap();
-    format!("ROOT: {}", first_or_default(recv))
+    first_or_default(recv)
 }
 
 #[get("/noop")]
@@ -38,8 +39,9 @@ async fn start_rocket() -> Result<(), rocket::Error> {
     let sndr = unsafe { STATUS_MSG_SENDER.take().unwrap() };
 
     let _r = rocket::build()
-        .mount("/", routes![root, app_root])
-        .mount("/api", routes![noop])
+        .mount("/", routes![root])
+        .mount("/api", routes![noop, api_count])
+        .mount("/app", FileServer::from("dist-app"))
         .manage(sndr)
         .launch()
         .await?;
