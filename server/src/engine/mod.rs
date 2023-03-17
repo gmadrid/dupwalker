@@ -1,9 +1,11 @@
 use crate::engine::status_mgr::StatusMgrMsg;
 use crossbeam_channel::{Receiver, Sender};
-use rocket::{routes, State};
-use std::path::PathBuf;
 use rocket::fs::FileServer;
 use rocket::response::Redirect;
+use rocket::serde::json::Json;
+use rocket::{routes, State};
+use shared::DWStatus;
+use std::path::PathBuf;
 
 mod file_walker;
 mod hasher;
@@ -22,7 +24,10 @@ fn root() -> Redirect {
 #[get("/count")]
 fn api_count(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
     let (sndr, recv) = crossbeam_channel::bounded(1);
-    (*status_sndr).clone().send(StatusMgrMsg::TestMsg(sndr)).unwrap();
+    (*status_sndr)
+        .clone()
+        .send(StatusMgrMsg::TestMsg(sndr))
+        .unwrap();
     first_or_default(recv)
 }
 
@@ -30,6 +35,16 @@ fn api_count(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
 fn api_noop(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
     (*status_sndr).clone().send(StatusMgrMsg::NoOp).unwrap();
     "NoOp".to_string()
+}
+
+#[get("/status")]
+fn api_status(status_sndr: &State<Sender<StatusMgrMsg>>) -> Json<DWStatus> {
+    let (sndr, recv) = crossbeam_channel::bounded(1);
+    (*status_sndr)
+        .clone()
+        .send(StatusMgrMsg::StatusRequest(sndr))
+        .unwrap();
+    Json(first_or_default(recv))
 }
 
 #[rocket::main]
@@ -40,7 +55,7 @@ async fn start_rocket() -> Result<(), rocket::Error> {
 
     let _r = rocket::build()
         .mount("/", routes![root])
-        .mount("/api", routes![api_noop, api_count])
+        .mount("/api", routes![api_noop, api_count, api_status])
         .mount("/app", FileServer::from("dist-app"))
         .manage(sndr)
         .launch()

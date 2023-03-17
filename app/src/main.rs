@@ -1,9 +1,9 @@
+use app::*;
+use gloo_net::http::Request;
+use shared::DWStatus;
+use std::path::PathBuf;
 use yew::prelude::*;
 use yew_hooks::use_interval;
-use gloo_net::http::Request;
-use std::ops::Deref;
-
-use app::*;
 
 #[function_component]
 fn DWNavBar() -> Html {
@@ -22,29 +22,51 @@ fn DWNavBar() -> Html {
 
 #[function_component]
 fn DWBody() -> Html {
-    let state = use_state(|| "".to_string());
+    let state = use_state(|| DWStatus::default());
     {
         let state2 = state.clone();
         use_interval(
-             move || {
-                 let state3 = state2.clone();
+            move || {
+                let state3 = state2.clone();
                 wasm_bindgen_futures::spawn_local(async move {
-                    let foobar = Request::get("/api/count").send().await.unwrap();
-                    let val = foobar.text().await.unwrap();
-                    state3.set(val);
+                    let foobar = Request::get("/api/status")
+                        .send()
+                        .await
+                        .unwrap()
+                        .json()
+                        .await
+                        .unwrap();
+                    state3.set(foobar);
                 });
             },
-            5000,
+            if state.finished { 0 } else { 500 },
         );
     }
+
+    let last_image = state
+        .last_scanned
+        .as_ref()
+        .and_then(|pb| pb.file_name())
+        .map(|pb| pb.to_string_lossy())
+        .unwrap_or_default()
+        .to_string();
 
     html! {
         <>
         <section class="section">
         <div class="container">
-        <h1 class="title">{"George something"}</h1>
-        <p class="subtitle">{"A subtitle"}</p>
-        <b>{state.deref()}</b>
+        <div class="panel">
+        <p class="panel-heading">{"Scan status"}</p>
+        <div class="panel-block">
+        <label>{"Images scanned: "}<b>{state.count}</b></label>
+        </div>
+        <div class="panel-block">
+        <p><label>{"Last image scanned:"}<b>{last_image}</b></label></p>
+        </div>
+        <div class="panel-block">
+        <p><label>{"Finished:"}<b>{state.finished}</b></label></p>
+        </div>
+        </div>
         </div>
         </section>
         </>

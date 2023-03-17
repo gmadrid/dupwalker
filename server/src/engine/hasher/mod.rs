@@ -33,7 +33,10 @@ pub fn start(
                 .unwrap();
         }
 
-        sender.send(()).unwrap();
+        status_sndr.send(StatusMgrMsg::ScanFinished).unwrap();
+
+        // We unwrap_or_default() in order to ignore any errors.
+        sender.send(()).unwrap_or_default();
     });
 
     receiver
