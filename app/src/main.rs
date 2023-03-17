@@ -1,7 +1,6 @@
 use app::*;
 use gloo_net::http::Request;
 use shared::DWStatus;
-use std::path::PathBuf;
 use yew::prelude::*;
 use yew_hooks::use_interval;
 
@@ -48,26 +47,25 @@ fn DWBody() -> Html {
         .as_ref()
         .and_then(|pb| pb.file_name())
         .map(|pb| pb.to_string_lossy())
-        .unwrap_or_default()
-        .to_string();
+        .unwrap_or_default();
 
     html! {
         <>
         <section class="section">
-        <div class="container">
-        <div class="panel">
-        <p class="panel-heading">{"Scan status"}</p>
-        <div class="panel-block">
-        <label>{"Images scanned: "}<b>{state.count}</b></label>
-        </div>
-        <div class="panel-block">
-        <p><label>{"Last image scanned:"}<b>{last_image}</b></label></p>
-        </div>
-        <div class="panel-block">
-        <p><label>{"Finished:"}<b>{state.finished}</b></label></p>
-        </div>
-        </div>
-        </div>
+          <div class="container">
+            <div class="panel">
+              <p class="panel-heading">{"Scan status"}</p>
+              <div class="panel-block">
+                <label>{"Images scanned: "}<b>{state.count}</b></label>
+              </div>
+              <div class="panel-block">
+                <p><label>{"Last image scanned: "}<b>{last_image}</b></label></p>
+              </div>
+              <div class="panel-block">
+                <p><label>{"Finished: "}<b>{state.finished}</b></label></p>
+              </div>
+            </div>
+          </div>
         </section>
         </>
     }

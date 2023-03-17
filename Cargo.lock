@@ -436,6 +436,8 @@ dependencies = [
  "mime",
  "mime_guess",
  "rocket",
+ "serde",
+ "serde_json",
  "shared",
 ]
 

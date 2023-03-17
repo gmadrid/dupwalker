@@ -8,6 +8,7 @@ use image::DynamicImage;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
+use crate::engine::status_mgr::StatusMgrMsg::{AddActiveHasher, HasherFinished};
 
 mod ahasher;
 mod dhasher;
@@ -33,8 +34,6 @@ pub fn start(
                 .unwrap();
         }
 
-        status_sndr.send(StatusMgrMsg::ScanFinished).unwrap();
-
         // We unwrap_or_default() in order to ignore any errors.
         sender.send(()).unwrap_or_default();
     });
@@ -53,10 +52,12 @@ fn start_hasher(
     let (sender, receiver) = crossbeam_channel::bounded(10);
 
     thread::spawn(move || {
+        status_sndr.send(AddActiveHasher);
         for (pathbuf, shared_image) in receiver {
             let hash = hash_func(Arc::as_ref(&shared_image));
             status_sndr.send(msg_func(pathbuf, hash)).unwrap();
         }
+        status_sndr.send(HasherFinished)
     });
 
     sender
