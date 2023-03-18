@@ -4,13 +4,16 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
+use std::time::SystemTime;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::serde::json::serde_json;
+use rocket::time::Date;
 
 pub enum StatusMgrMsg {
     NoOp,
     AHash(Arc<PathBuf>, u64),
     DHash(Arc<PathBuf>, u64),
+    GetImageData(Arc<PathBuf>, Sender<Option<ImageData>>),
     AddActiveHasher,
     HasherFinished,
 
@@ -35,18 +38,28 @@ pub struct StatusMgr {
 }
 
 impl StatusMgr {
+    pub fn load_or_default(path: impl AsRef<Path>) -> Self {
+        if let Ok(f) = std::fs::File::open(path) {
+            // TODO: we are failing silently here. Maybe we shouldn't.
+            serde_json::from_reader(f).unwrap_or_default()
+        } else {
+            Self::default()
+        }
+    }
+
     pub fn save(&mut self, path: impl AsRef<Path>) {
         let w = std::fs::File::create(path.as_ref()).unwrap();
         serde_json::to_writer_pretty(w, self).unwrap();
         self.dirty = false;
-        println!("SAVING: {}", self.data.len());
+
+        println!("Saving {} entries at {:?}", self.data.len(), SystemTime::now());
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct ImageData {
-    a_hash: Option<u64>,
-    d_hash: Option<u64>,
+    pub a_hash: Option<u64>,
+    pub d_hash: Option<u64>,
 }
 
 impl ImageData {
@@ -55,12 +68,13 @@ impl ImageData {
     }
 }
 
-pub fn start() -> Sender<StatusMgrMsg> {
+pub fn start(cache_file: &Path) -> Sender<StatusMgrMsg> {
     let (sender, receiver) = crossbeam_channel::bounded(10);
 
+    let cache_file = cache_file.to_path_buf();
     thread::spawn(move || {
-        let path = PathBuf::from("./FOOBARRR.json");
-        let mut mgr = StatusMgr::default();
+        let mut mgr = StatusMgr::load_or_default(&cache_file);
+        println!("Loaded cache with {} entries.", mgr.data.len());
         for msg in receiver {
             match msg {
                 StatusMgrMsg::NoOp => {
@@ -80,6 +94,9 @@ pub fn start() -> Sender<StatusMgrMsg> {
                     mgr.dirty = true;
                     println!("DHASH: {}", mgr.data.len());
                 }
+                StatusMgrMsg::GetImageData(pathbuf, sndr) => {
+                    sndr.send(mgr.data.get(pathbuf.as_ref()).cloned()).unwrap();
+                }
                 StatusMgrMsg::TestMsg(sndr) => {
                     let s = format!("{}", mgr.data.len());
                     sndr.send(s).unwrap();
@@ -93,7 +110,7 @@ pub fn start() -> Sender<StatusMgrMsg> {
                     sndr.send(s).unwrap();
                 }
                 StatusMgrMsg::SaveData => {
-                    mgr.save(&path);
+                    mgr.save(&cache_file);
                 }
                 StatusMgrMsg::AddActiveHasher => {
                     mgr.active_hashers += 1;
@@ -101,7 +118,7 @@ pub fn start() -> Sender<StatusMgrMsg> {
                 StatusMgrMsg::HasherFinished => {
                     mgr.active_hashers -= 1;
                     if mgr.active_hashers == 0 {
-                        mgr.save(&path);
+                        mgr.save(&cache_file);
                         println!("FINISHED: {}", mgr.data.len());
                     }
                 }

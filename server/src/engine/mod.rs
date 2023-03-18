@@ -5,14 +5,14 @@ use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::{routes, State};
 use shared::DWStatus;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod file_walker;
 mod hasher;
 mod image_loader;
 mod status_mgr;
 
-fn first_or_default<T: Default>(recv: Receiver<T>) -> T {
+pub fn first_or_default<T: Default>(recv: Receiver<T>) -> T {
     recv.iter().next().unwrap_or_default()
 }
 
@@ -69,15 +69,15 @@ pub struct Engine;
 static mut STATUS_MSG_SENDER: Option<Sender<StatusMgrMsg>> = None;
 
 impl Engine {
-    pub fn run(self, roots: &[PathBuf]) {
-        let status_sndr = status_mgr::start();
+    pub fn run(self, roots: &[PathBuf], cache_file: &Path) {
+        let status_sndr = status_mgr::start(cache_file);
         unsafe {
             // AFAIK, we have no way to pass this to the Rocket builder func, so we use a global.
             STATUS_MSG_SENDER = Some(status_sndr.clone());
         }
 
         let file_recv = file_walker::start(roots);
-        let loader_recv = image_loader::start(file_recv);
+        let loader_recv = image_loader::start(file_recv, status_sndr.clone());
         hasher::start(loader_recv, status_sndr);
 
         start_rocket().unwrap();

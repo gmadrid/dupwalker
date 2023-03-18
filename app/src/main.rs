@@ -21,7 +21,7 @@ fn DWNavBar() -> Html {
 
 #[function_component]
 fn DWBody() -> Html {
-    let state = use_state(|| DWStatus::default());
+    let state = use_state(DWStatus::default);
     {
         let state2 = state.clone();
         use_interval(
