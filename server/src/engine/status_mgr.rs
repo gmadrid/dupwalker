@@ -84,9 +84,10 @@ impl StatusMgr {
         self.dirty = false;
 
         println!(
-            "Saving {} entries at {:?}",
+            "Saving {} entries at {:?} to {:?}",
             self.data.len(),
-            SystemTime::now()
+            SystemTime::now(),
+            &self.cache_path
         );
     }
 }

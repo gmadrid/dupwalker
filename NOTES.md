@@ -1,7 +1,5 @@
 ###### stuff to do
 
-- caching
-  - put cache in 'cache' directory
 - more parallelism for image loading? 
 - better UI reporting of current state
 - dup finding
