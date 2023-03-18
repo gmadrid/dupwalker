@@ -1,10 +1,7 @@
 ###### stuff to do
 
 - caching
-  - save cache
-  - load cache
   - put cache in 'cache' directory
-  - check that a file needs to be done before doing it
 - more parallelism for image loading? 
 - better UI reporting of current state
 - dup finding

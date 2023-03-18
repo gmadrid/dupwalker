@@ -43,14 +43,12 @@ impl StatusMgr {
         self.last_scanned = Some(pathbuf.clone());
         self.data.entry(pathbuf.to_path_buf()).or_default().a_hash = Some(hsh);
         self.dirty = true;
-        println!("AHASH: {}", self.data.len());
     }
 
     fn dhash(&mut self, pathbuf: Arc<PathBuf>, hsh: u64) {
         self.last_scanned = Some(pathbuf.clone());
         self.data.entry(pathbuf.to_path_buf()).or_default().d_hash = Some(hsh);
         self.dirty = true;
-        println!("DHASH: {}", self.data.len());
     }
 
     fn add_active_hasher(&mut self) {
