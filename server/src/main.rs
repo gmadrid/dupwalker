@@ -20,13 +20,11 @@ struct Args {
 
 fn main() {
     let args: Args = argh::from_env();
-    let cache_file = args
-        .cache_file
-        .unwrap_or_else(|| {
-            directories::BaseDirs::new()
-                .map(|bd| bd.cache_dir().join("dupwalker_cache.js"))
-                .unwrap()
-        });
+    let cache_file = args.cache_file.unwrap_or_else(|| {
+        directories::BaseDirs::new()
+            .map(|bd| bd.cache_dir().join("dupwalker_cache.js"))
+            .unwrap()
+    });
     if args.clear_cache {
         if let Err(err) = std::fs::remove_file(&cache_file) {
             println!("Error clearing cache: {:?}", err);

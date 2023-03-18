@@ -1,6 +1,6 @@
 use app::*;
 use gloo_net::http::Request;
-use shared::DWStatus;
+use shared::{DWComparingStatus, DWScanningStatus, DWStatus};
 use yew::prelude::*;
 use yew_hooks::use_interval;
 
@@ -38,11 +38,56 @@ fn DWBody() -> Html {
                     state3.set(foobar);
                 });
             },
-            if state.finished { 0 } else { 500 },
+            if !matches!(*state, DWStatus::Initializing | DWStatus::Scanning(_)) {
+                0
+            } else {
+                500
+            },
         );
     }
 
-    let last_image = state
+    dwstatus_summary(&state)
+}
+
+fn dwstatus_summary(status: &DWStatus) -> Html {
+    let contents = match status {
+        DWStatus::Initializing => html! {},
+        DWStatus::Scanning(scanning) => dwscanning_summary(scanning),
+        DWStatus::Comparing(comparing) => dwcomparing_summary(comparing),
+        DWStatus::Ready => {
+            html! { <b>{"Ready placeholder"}</b>}
+        }
+    };
+    html! {
+        <>
+        <section class="section">
+          <div class="container">
+            {contents}
+          </div>
+        </section>
+        </>
+    }
+}
+
+fn dwcomparing_summary(comparing: &DWComparingStatus) -> Html {
+    let progress_str = format!("{} / {}", comparing.image_scanning, comparing.total_images);
+    let current_image_number = comparing.image_scanning.to_string();
+    let total_images = comparing.total_images.to_string();
+    html! {
+        <div class="panel is-primary">
+          <p class="panel-heading">{"Looking for near duplicates..."}</p>
+          <div class="panel-block">
+            <label>{"Progress: "}<b>{progress_str}</b></label>
+          </div>
+          <div class="panel-block">
+            <progress class="progress is-primary" value={current_image_number} max={total_images}/>
+          </div>
+        </div>
+    }
+}
+
+fn dwscanning_summary(scanning: &DWScanningStatus) -> Html {
+    let last_image = scanning
         .last_scanned
         .as_ref()
         .and_then(|pb| pb.file_name())
@@ -50,24 +95,15 @@ fn DWBody() -> Html {
         .unwrap_or_default();
 
     html! {
-        <>
-        <section class="section">
-          <div class="container">
-            <div class="panel">
-              <p class="panel-heading">{"Scan status"}</p>
-              <div class="panel-block">
-                <label>{"Images scanned: "}<b>{state.count}</b></label>
-              </div>
-              <div class="panel-block">
-                <p><label>{"Last image scanned: "}<b>{last_image}</b></label></p>
-              </div>
-              <div class="panel-block">
-                <p><label>{"Finished: "}<b>{state.finished}</b></label></p>
-              </div>
-            </div>
+        <div class="panel is-primary">
+          <p class="panel-heading">{"Scanning image files..."}</p>
+          <div class="panel-block">
+            <label>{"Images scanned: "}<b>{scanning.count}</b></label>
           </div>
-        </section>
-        </>
+          <div class="panel-block">
+            <label>{"Last image: "}<b>{last_image}</b></label>
+          </div>
+        </div>
     }
 }
 

@@ -1,7 +1,7 @@
 use crossbeam_channel::Sender;
 use rocket::serde::json::serde_json;
 use rocket::serde::{Deserialize, Serialize};
-use shared::DWStatus;
+use shared::{DWComparingStatus, DWScanningStatus, DWStatus};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -116,7 +116,7 @@ pub fn start(cache_file: &Path) -> Sender<StatusMgrMsg> {
                 StatusMgrMsg::NoOp => println!("NoOp"),
                 StatusMgrMsg::AHash(pathbuf, hsh) => mgr.ahash(pathbuf.clone(), hsh),
                 StatusMgrMsg::DHash(pathbuf, hsh) => mgr.dhash(pathbuf.clone(), hsh),
-                StatusMgrMsg::SaveData =>  mgr.save(),
+                StatusMgrMsg::SaveData => mgr.save(),
                 StatusMgrMsg::AddActiveHasher => mgr.add_active_hasher(),
                 StatusMgrMsg::HasherFinished => mgr.finish_hasher(),
 
@@ -125,10 +125,16 @@ pub fn start(cache_file: &Path) -> Sender<StatusMgrMsg> {
                     sndr.send(image_data).unwrap();
                 }
                 StatusMgrMsg::StatusRequest(sndr) => {
-                    let s = DWStatus {
-                        count: mgr.data.len(),
-                        finished: mgr.active_hashers == 0,
-                        last_scanned: mgr.last_scanned.as_ref().map(|apb| apb.as_ref().clone()),
+                    let s = if mgr.active_hashers == 0 {
+                        DWStatus::Comparing(DWComparingStatus {
+                            total_images: mgr.data.len(),
+                            image_scanning: 0,
+                        })
+                    } else {
+                        DWStatus::Scanning(DWScanningStatus {
+                            count: mgr.data.len(),
+                            last_scanned: mgr.last_scanned.as_ref().map(|apb| apb.as_ref().clone()),
+                        })
                     };
                     sndr.send(s).unwrap();
                 }

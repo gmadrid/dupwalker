@@ -58,6 +58,7 @@ async fn start_rocket() -> Result<(), rocket::Error> {
 
 pub struct Engine;
 
+// TODO: move stuff around to try to get rid of the globals.
 static mut STATUS_MSG_SENDER: Option<Sender<StatusMgrMsg>> = None;
 
 impl Engine {
