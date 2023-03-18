@@ -40,10 +40,12 @@ fn api_noop(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
 #[get("/status")]
 fn api_status(status_sndr: &State<Sender<StatusMgrMsg>>) -> Json<DWStatus> {
     let (sndr, recv) = crossbeam_channel::bounded(1);
-    (*status_sndr)
+    let send_result = (*status_sndr)
         .clone()
-        .send(StatusMgrMsg::StatusRequest(sndr))
-        .unwrap();
+        .send(StatusMgrMsg::StatusRequest(sndr));
+    if let Err(err) = send_result {
+        println!("ERROR in api_status: {:?}", err);
+    }
     Json(first_or_default(recv))
 }
 
