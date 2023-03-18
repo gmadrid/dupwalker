@@ -8,7 +8,6 @@ use image::DynamicImage;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
-use crate::engine::first_or_default;
 use crate::engine::status_mgr::StatusMgrMsg::{AddActiveHasher, HasherFinished};
 
 mod ahasher;
