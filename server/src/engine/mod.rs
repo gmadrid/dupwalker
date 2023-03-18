@@ -21,16 +21,6 @@ fn root() -> Redirect {
     Redirect::to("/app")
 }
 
-#[get("/count")]
-fn api_count(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
-    let (sndr, recv) = crossbeam_channel::bounded(1);
-    (*status_sndr)
-        .clone()
-        .send(StatusMgrMsg::TestMsg(sndr))
-        .unwrap();
-    first_or_default(recv)
-}
-
 #[get("/noop")]
 fn api_noop(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
     (*status_sndr).clone().send(StatusMgrMsg::NoOp).unwrap();
@@ -57,7 +47,7 @@ async fn start_rocket() -> Result<(), rocket::Error> {
 
     let _r = rocket::build()
         .mount("/", routes![root])
-        .mount("/api", routes![api_noop, api_count, api_status])
+        .mount("/api", routes![api_noop, api_status])
         .mount("/app", FileServer::from("dist-app"))
         .manage(sndr)
         .launch()

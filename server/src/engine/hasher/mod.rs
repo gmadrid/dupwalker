@@ -2,13 +2,13 @@
 // https://github.com/JohannesBuchner/imagehash
 // https://apiumhub.com/tech-blog-barcelona/introduction-perceptual-hashes-measuring-similarity/
 
+use crate::engine::status_mgr::StatusMgrMsg::{AddActiveHasher, HasherFinished};
 use crate::engine::status_mgr::{ImageData, StatusMgrMsg};
 use crossbeam_channel::{Receiver, Sender};
 use image::DynamicImage;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
-use crate::engine::status_mgr::StatusMgrMsg::{AddActiveHasher, HasherFinished};
 
 mod ahasher;
 mod dhasher;

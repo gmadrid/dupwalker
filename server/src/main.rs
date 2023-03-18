@@ -16,6 +16,8 @@ struct Args {
 
 fn main() {
     let args: Args = argh::from_env();
-    let cache_file = args.cache_file.unwrap_or_else(|| PathBuf::from("./cache_file.js"));
+    let cache_file = args
+        .cache_file
+        .unwrap_or_else(|| PathBuf::from("./cache_file.js"));
     dupwalker::Engine.run(&args.directories, &cache_file);
 }
