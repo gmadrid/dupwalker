@@ -7,6 +7,7 @@ use rocket::{routes, State};
 use shared::DWStatus;
 use std::path::{Path, PathBuf};
 
+mod dupfinder;
 mod file_walker;
 mod hasher;
 mod image_loader;

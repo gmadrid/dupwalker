@@ -1,7 +1,6 @@
 ###### stuff to do
 
 - more parallelism for image loading? 
-- better UI reporting of current state
 - dup finding
   - put stuff in buckets based on number of ones in hash
   - look for images withing threshold of hamming distance
