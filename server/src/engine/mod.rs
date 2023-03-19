@@ -72,7 +72,8 @@ impl Engine {
 
         let file_recv = file_walker::start(roots);
         let loader_recv = image_loader::start(file_recv, status_sndr.clone());
-        hasher::start(loader_recv, status_sndr);
+        let hasher_done_recv = hasher::start(loader_recv, status_sndr.clone());
+        let dupfinder_done_recv = dupfinder::start(hasher_done_recv, status_sndr);
 
         start_rocket().unwrap();
     }

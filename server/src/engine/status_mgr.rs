@@ -13,12 +13,12 @@ pub enum StatusMgrMsg {
     AHash(Arc<PathBuf>, u64),
     DHash(Arc<PathBuf>, u64),
     GetImageData(Arc<PathBuf>, Sender<Option<ImageData>>),
-    AddActiveHasher,
-    HasherFinished,
+    ScanFinished,
 
     SaveData,
 
     StatusRequest(Sender<DWStatus>),
+    FilesRequest(Sender<Vec<PathBuf>>),
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -26,7 +26,7 @@ pub struct StatusMgr {
     data: HashMap<PathBuf, ImageData>,
 
     #[serde(skip)]
-    active_hashers: usize,
+    scan_finished: bool,
 
     #[serde(skip)]
     last_scanned: Option<Arc<PathBuf>>,
@@ -51,16 +51,9 @@ impl StatusMgr {
         self.dirty = true;
     }
 
-    fn add_active_hasher(&mut self) {
-        self.active_hashers += 1;
-    }
-
-    fn finish_hasher(&mut self) {
-        self.active_hashers -= 1;
-        if self.active_hashers == 0 {
-            self.save();
-            println!("FINISHED: {}", self.data.len());
-        }
+    fn finish_scan(&mut self) {
+        self.scan_finished = true;
+        self.save();
     }
 
     fn get_image_data(&self, path: &PathBuf) -> Option<&ImageData> {
@@ -110,22 +103,29 @@ pub fn start(cache_file: &Path) -> Sender<StatusMgrMsg> {
     let cache_file = cache_file.to_path_buf();
     thread::spawn(move || {
         let mut mgr = StatusMgr::load_or_default(&cache_file);
-        println!("Loaded cache with {} entries.", mgr.data.len());
+        println!(
+            "Loaded cache with {} entries from {}.",
+            mgr.data.len(),
+            cache_file.display()
+        );
         for msg in receiver {
             match msg {
                 StatusMgrMsg::NoOp => println!("NoOp"),
                 StatusMgrMsg::AHash(pathbuf, hsh) => mgr.ahash(pathbuf.clone(), hsh),
                 StatusMgrMsg::DHash(pathbuf, hsh) => mgr.dhash(pathbuf.clone(), hsh),
                 StatusMgrMsg::SaveData => mgr.save(),
-                StatusMgrMsg::AddActiveHasher => mgr.add_active_hasher(),
-                StatusMgrMsg::HasherFinished => mgr.finish_hasher(),
+                StatusMgrMsg::ScanFinished => mgr.finish_scan(),
 
+                StatusMgrMsg::FilesRequest(sndr) => {
+                    let v = mgr.data.keys().cloned().collect();
+                    sndr.send(v).unwrap();
+                }
                 StatusMgrMsg::GetImageData(pathbuf, sndr) => {
                     let image_data = mgr.get_image_data(pathbuf.as_ref()).cloned();
                     sndr.send(image_data).unwrap();
                 }
                 StatusMgrMsg::StatusRequest(sndr) => {
-                    let s = if mgr.active_hashers == 0 {
+                    let s = if mgr.scan_finished {
                         DWStatus::Comparing(DWComparingStatus {
                             total_images: mgr.data.len(),
                             image_scanning: 0,
