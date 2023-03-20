@@ -80,7 +80,7 @@ pub fn start(hasher_done_recv: Receiver<()>, status_mgr: Arc<Mutex<StatusMgr>>) 
         // Wait for the hasher to be done.
         first_or_default(hasher_done_recv);
 
-        let filenames: Vec<PathBuf> = status_mgr.lock().unwrap().data.keys().cloned().collect();
+        let filenames: Vec<PathBuf> = status_mgr.lock().unwrap().paths();
 
         let mut map = DupFinderMap::new(|id| id.a_hash);
         let mut fns_with_hashes = Vec::<(PathBuf, u64)>::new();

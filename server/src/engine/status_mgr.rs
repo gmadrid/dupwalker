@@ -8,13 +8,13 @@ use std::time::SystemTime;
 #[derive(Default, Serialize, Deserialize)]
 pub struct StatusMgr {
     // TODO: replace this with hashbrown so that you can use Arc<PathBuf>?
-    pub data: HashMap<PathBuf, ImageData>,
+    data: HashMap<PathBuf, ImageData>,
 
     #[serde(skip)]
-    pub scan_finished: bool,
+    scan_finished: bool,
 
     #[serde(skip)]
-    pub last_scanned: Option<Arc<PathBuf>>,
+    last_scanned: Option<Arc<PathBuf>>,
 
     #[serde(skip)]
     dirty: bool,
@@ -24,6 +24,14 @@ pub struct StatusMgr {
 }
 
 impl StatusMgr {
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn paths(&self) -> Vec<PathBuf> {
+        self.data.keys().cloned().collect()
+    }
+
     pub fn ahash(&mut self, pathbuf: Arc<PathBuf>, hsh: u64) {
         self.last_scanned = Some(pathbuf.clone());
         self.data.entry(pathbuf.to_path_buf()).or_default().a_hash = Some(hsh);
@@ -34,6 +42,14 @@ impl StatusMgr {
         self.last_scanned = Some(pathbuf.clone());
         self.data.entry(pathbuf.to_path_buf()).or_default().d_hash = Some(hsh);
         self.dirty = true;
+    }
+
+    pub fn last_scanned(&self) -> Option<Arc<PathBuf>> {
+        self.last_scanned.clone()
+    }
+
+    pub fn scan_finished(&self) -> bool {
+        self.scan_finished
     }
 
     pub fn finish_scan(&mut self) {
