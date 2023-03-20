@@ -32,7 +32,7 @@ impl<G: Fn(&ImageData) -> Option<u64>> DupFinderMap<G> {
         }
     }
 
-    pub fn add_image(&mut self, path: &Path, image_data: &ImageData) {
+    pub fn add_image(&mut self, path: &Path, image_data: &ImageData) -> Option<u64>{
         if let Some(hash) = (self.hash_getter)(image_data) {
             let bit_count = count_bits(hash);
             let v = &mut self.lookup[bit_count as usize];
@@ -40,6 +40,9 @@ impl<G: Fn(&ImageData) -> Option<u64>> DupFinderMap<G> {
                 filename: path.to_path_buf(),
                 hash,
             });
+            Some(hash)
+        } else {
+            None
         }
     }
 
@@ -69,6 +72,8 @@ struct FileInfo {
     hash: u64,
 }
 
+const HAMMING_DISTANCE: u8 = 3;
+
 pub fn start(hasher_done_recv: Receiver<()>, status_sndr: Sender<StatusMgrMsg>) -> Receiver<()> {
     let (done_sender, done_receiver) = crossbeam_channel::bounded(1);
 
@@ -83,15 +88,27 @@ pub fn start(hasher_done_recv: Receiver<()>, status_sndr: Sender<StatusMgrMsg>) 
 
         let filenames = first_or_default(filenames_recv);
         let mut map = DupFinderMap::new(|id| id.a_hash);
+        let mut fns_with_hashes = Vec::<(PathBuf, u64)>::new();
         for filename in &filenames {
             let (id_sndr, id_recv) = crossbeam_channel::bounded(1);
             let afn = Arc::new(filename.clone());
             status_sndr.send(GetImageData(afn, id_sndr)).unwrap();
             let image_data = first_or_default(id_recv).unwrap_or_default();
-            map.add_image(filename, &image_data);
+            if let Some(hsh) = map.add_image(filename, &image_data) {
+                fns_with_hashes.push((filename.to_path_buf(), hsh));
+            }
         }
 
-        // TODO: after adding all of the files,
+        for (filename, hsh) in fns_with_hashes {
+            let near_images = map.find_near_images(hsh, HAMMING_DISTANCE);
+            if near_images.len() > 0 {
+                println!("Found {} near images.", near_images.len());
+                near_images.iter().for_each(|path| {
+                    println!("  {}", path.display());
+                });
+            }
+        }
+
         done_sender.send(()).unwrap_or_default()
     });
 

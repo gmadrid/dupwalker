@@ -10,4 +10,4 @@
 - in UI, allow selection of images and show all of its neighbors
 - in UI, allow deletion of selected images.
 - investigate a perceptual hash like Haar.
-- 
+

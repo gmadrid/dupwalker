@@ -1,12 +1,11 @@
-use crate::engine::status_mgr::StatusMgrMsg;
+use crate::engine::status_mgr::{StatusMgr, StatusMgrMsg};
 use crossbeam_channel::{Receiver, Sender};
 use rocket::fs::FileServer;
-use rocket::response::Redirect;
-use rocket::serde::json::Json;
-use rocket::{routes, State};
-use shared::DWStatus;
+use rocket::{routes};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
+mod api;
 mod dupfinder;
 mod file_walker;
 mod hasher;
@@ -17,29 +16,6 @@ pub fn first_or_default<T: Default>(recv: Receiver<T>) -> T {
     recv.iter().next().unwrap_or_default()
 }
 
-#[get("/")]
-fn root() -> Redirect {
-    Redirect::to("/app")
-}
-
-#[get("/noop")]
-fn api_noop(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
-    (*status_sndr).clone().send(StatusMgrMsg::NoOp).unwrap();
-    "NoOp".to_string()
-}
-
-#[get("/status")]
-fn api_status(status_sndr: &State<Sender<StatusMgrMsg>>) -> Json<DWStatus> {
-    let (sndr, recv) = crossbeam_channel::bounded(1);
-    let send_result = (*status_sndr)
-        .clone()
-        .send(StatusMgrMsg::StatusRequest(sndr));
-    if let Err(err) = send_result {
-        println!("ERROR in api_status: {:?}", err);
-    }
-    Json(first_or_default(recv))
-}
-
 #[rocket::main]
 async fn start_rocket() -> Result<(), rocket::Error> {
     // We pass this in a global since Rocket won't let me add parameters to this function.
@@ -47,8 +23,8 @@ async fn start_rocket() -> Result<(), rocket::Error> {
     let sndr = unsafe { STATUS_MSG_SENDER.take().unwrap() };
 
     let _r = rocket::build()
-        .mount("/", routes![root])
-        .mount("/api", routes![api_noop, api_status])
+        .mount("/", routes![api::root])
+        .mount("/api", routes![api::api_noop, api::api_status])
         .mount("/app", FileServer::from("dist-app"))
         .manage(sndr)
         .launch()
@@ -64,6 +40,7 @@ static mut STATUS_MSG_SENDER: Option<Sender<StatusMgrMsg>> = None;
 
 impl Engine {
     pub fn run(self, roots: &[PathBuf], cache_file: &Path) {
+//        let Arc::new(Mutex::new(StatusMgr::load_or_default(cache_file)));
         let status_sndr = status_mgr::start(cache_file);
         unsafe {
             // AFAIK, we have no way to pass this to the Rocket builder func, so we use a global.
