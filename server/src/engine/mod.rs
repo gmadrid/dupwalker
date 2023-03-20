@@ -1,5 +1,5 @@
 use crate::engine::status_mgr::StatusMgr;
-use crossbeam_channel::{Receiver};
+use crossbeam_channel::Receiver;
 use rocket::fs::FileServer;
 use rocket::routes;
 use std::path::{Path, PathBuf};

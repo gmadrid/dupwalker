@@ -1,6 +1,6 @@
 use crate::engine::first_or_default;
 use crate::engine::status_mgr::{ImageData, StatusMgr};
-use crossbeam_channel::{Receiver};
+use crossbeam_channel::Receiver;
 use std::cmp::{max, min};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -86,7 +86,12 @@ pub fn start(hasher_done_recv: Receiver<()>, status_mgr: Arc<Mutex<StatusMgr>>) 
         let mut fns_with_hashes = Vec::<(PathBuf, u64)>::new();
         for filename in &filenames {
             let afn = Arc::new(filename.clone());
-            let image_data = status_mgr.lock().unwrap().get_image_data(&afn).cloned().unwrap_or_default();
+            let image_data = status_mgr
+                .lock()
+                .unwrap()
+                .get_image_data(&afn)
+                .cloned()
+                .unwrap_or_default();
             if let Some(hsh) = map.add_image(filename, &image_data) {
                 fns_with_hashes.push((filename.to_path_buf(), hsh));
             }

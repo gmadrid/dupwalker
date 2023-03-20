@@ -1,5 +1,5 @@
 use crate::engine::status_mgr::{ImageData, StatusMgr};
-use crossbeam_channel::{Receiver};
+use crossbeam_channel::Receiver;
 use image::DynamicImage;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};

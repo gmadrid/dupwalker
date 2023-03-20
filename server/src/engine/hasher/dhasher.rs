@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-use std::sync::Arc;
-use image::imageops::FilterType;
-use image::DynamicImage;
 use crate::engine::hasher::Hasher;
 use crate::engine::status_mgr::StatusMgr;
+use image::imageops::FilterType;
+use image::DynamicImage;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 pub struct DHasher;
 
@@ -12,7 +12,11 @@ impl Hasher for DHasher {
         dhash(image)
     }
 
-    fn hash_getter(&self, status_mgr: &impl AsRef<StatusMgr>, path: &impl AsRef<PathBuf>) -> Option<u64> {
+    fn hash_getter(
+        &self,
+        status_mgr: &impl AsRef<StatusMgr>,
+        path: &impl AsRef<PathBuf>,
+    ) -> Option<u64> {
         let image_data = status_mgr.as_ref().get_image_data(path.as_ref());
         image_data.and_then(|id| id.d_hash)
     }

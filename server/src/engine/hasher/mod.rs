@@ -4,21 +4,25 @@
 
 //use crate::engine::status_mgr::StatusMgrMsg::{AddActiveHasher, HasherFinished};
 use crate::engine::first_or_default;
+use crate::engine::hasher::ahasher::AHasher;
+use crate::engine::hasher::dhasher::DHasher;
 use crate::engine::status_mgr::{ImageData, StatusMgr};
 use crossbeam_channel::{Receiver, Sender};
 use image::DynamicImage;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use crate::engine::hasher::ahasher::AHasher;
-use crate::engine::hasher::dhasher::DHasher;
 
 mod ahasher;
 mod dhasher;
 
-pub trait Hasher : Send + Sync + 'static {
+pub trait Hasher: Send + Sync + 'static {
     fn hash(&self, image: &DynamicImage) -> u64;
-    fn hash_getter(&self, status_mgr: &impl AsRef<StatusMgr>, path: &impl AsRef<PathBuf>) -> Option<u64>;
+    fn hash_getter(
+        &self,
+        status_mgr: &impl AsRef<StatusMgr>,
+        path: &impl AsRef<PathBuf>,
+    ) -> Option<u64>;
     fn hash_setter(&self, status_mgr: &mut StatusMgr, path: &impl AsRef<PathBuf>, hsh: u64);
 }
 
@@ -37,14 +41,8 @@ pub fn start(
     let (done_sender, done_receiver) = crossbeam_channel::bounded(1);
 
     thread::spawn(move || {
-        let (ahash_sndr, ahash_done_recv) = start_hasher(
-            AHasher,
-            status_mgr.clone(),
-        );
-        let (dhash_sndr, dhash_done_recv) = start_hasher(
-            DHasher,
-            status_mgr.clone(),
-        );
+        let (ahash_sndr, ahash_done_recv) = start_hasher(AHasher, status_mgr.clone());
+        let (dhash_sndr, dhash_done_recv) = start_hasher(DHasher, status_mgr.clone());
 
         for (shared_path, shared_image, image_data) in image_recv {
             if image_data.d_hash.is_none() {
@@ -77,8 +75,10 @@ fn start_hasher(
     hasher: impl Hasher,
     status_mgr: Arc<Mutex<StatusMgr>>,
 ) -> (Sender<(Arc<PathBuf>, Arc<DynamicImage>)>, Receiver<()>) {
-    let (image_sender, image_receiver) : (Sender<(Arc<PathBuf>, Arc<DynamicImage>)>, Receiver<(Arc<PathBuf>, Arc<DynamicImage>)>)
-        = crossbeam_channel::bounded(10);
+    let (image_sender, image_receiver): (
+        Sender<(Arc<PathBuf>, Arc<DynamicImage>)>,
+        Receiver<(Arc<PathBuf>, Arc<DynamicImage>)>,
+    ) = crossbeam_channel::bounded(10);
     let (done_sender, done_receiver) = crossbeam_channel::bounded(1);
 
     thread::spawn(move || {
