@@ -1,10 +1,9 @@
+use crate::engine::status_mgr::StatusMgr;
 use rocket::response::Redirect;
-use rocket::State;
-use crossbeam_channel::Sender;
 use rocket::serde::json::Json;
-use shared::DWStatus;
-use crate::engine;
-use crate::engine::status_mgr::StatusMgrMsg;
+use rocket::State;
+use shared::{DWComparingStatus, DWScanningStatus, DWStatus};
+use std::sync::{Arc, Mutex};
 
 #[get("/")]
 pub fn root() -> Redirect {
@@ -12,19 +11,27 @@ pub fn root() -> Redirect {
 }
 
 #[get("/noop")]
-pub fn api_noop(status_sndr: &State<Sender<StatusMgrMsg>>) -> String {
-    (*status_sndr).clone().send(StatusMgrMsg::NoOp).unwrap();
+pub fn api_noop() -> String {
     "NoOp".to_string()
 }
 
 #[get("/status")]
-pub fn api_status(status_sndr: &State<Sender<StatusMgrMsg>>) -> Json<DWStatus> {
-    let (sndr, recv) = crossbeam_channel::bounded(1);
-    let send_result = (*status_sndr)
-        .clone()
-        .send(StatusMgrMsg::StatusRequest(sndr));
-    if let Err(err) = send_result {
-        println!("ERROR in api_status: {:?}", err);
-    }
-    Json(engine::first_or_default(recv))
+pub fn api_status(status_mgr: &State<Arc<Mutex<StatusMgr>>>) -> Json<DWStatus> {
+    let status_mgr = status_mgr.lock().unwrap();
+
+    let s = if status_mgr.scan_finished {
+        DWStatus::Comparing(DWComparingStatus {
+            total_images: status_mgr.data.len(),
+            image_scanning: 0,
+        })
+    } else {
+        DWStatus::Scanning(DWScanningStatus {
+            count: status_mgr.data.len(),
+            last_scanned: status_mgr
+                .last_scanned
+                .as_ref()
+                .map(|apb| apb.as_ref().clone()),
+        })
+    };
+    Json(s)
 }

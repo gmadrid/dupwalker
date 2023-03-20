@@ -4,15 +4,23 @@
 
 //use crate::engine::status_mgr::StatusMgrMsg::{AddActiveHasher, HasherFinished};
 use crate::engine::first_or_default;
-use crate::engine::status_mgr::{ImageData, StatusMgrMsg};
+use crate::engine::status_mgr::{ImageData, StatusMgr};
 use crossbeam_channel::{Receiver, Sender};
 use image::DynamicImage;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
+use crate::engine::hasher::ahasher::AHasher;
+use crate::engine::hasher::dhasher::DHasher;
 
 mod ahasher;
 mod dhasher;
+
+pub trait Hasher : Send + Sync + 'static {
+    fn hash(&self, image: &DynamicImage) -> u64;
+    fn hash_getter(&self, status_mgr: &impl AsRef<StatusMgr>, path: &impl AsRef<PathBuf>) -> Option<u64>;
+    fn hash_setter(&self, status_mgr: &mut StatusMgr, path: &impl AsRef<PathBuf>, hsh: u64);
+}
 
 /// Start the Hasher on another thread.
 ///
@@ -24,15 +32,19 @@ mod dhasher;
 ///
 pub fn start(
     image_recv: Receiver<(Arc<PathBuf>, Arc<DynamicImage>, ImageData)>,
-    status_sndr: Sender<StatusMgrMsg>,
+    status_mgr: Arc<Mutex<StatusMgr>>,
 ) -> Receiver<()> {
     let (done_sender, done_receiver) = crossbeam_channel::bounded(1);
 
     thread::spawn(move || {
-        let (ahash_sndr, ahash_done_recv) =
-            start_hasher(ahasher::ahash, StatusMgrMsg::AHash, status_sndr.clone());
-        let (dhash_sndr, dhash_done_recv) =
-            start_hasher(dhasher::dhash, StatusMgrMsg::DHash, status_sndr.clone());
+        let (ahash_sndr, ahash_done_recv) = start_hasher(
+            AHasher,
+            status_mgr.clone(),
+        );
+        let (dhash_sndr, dhash_done_recv) = start_hasher(
+            DHasher,
+            status_mgr.clone(),
+        );
 
         for (shared_path, shared_image, image_data) in image_recv {
             if image_data.d_hash.is_none() {
@@ -54,31 +66,25 @@ pub fn start(
         drop(dhash_sndr);
         first_or_default(dhash_done_recv);
 
-        // We unwrap_or_default() in order to ignore any errors.
-        status_sndr
-            .send(StatusMgrMsg::ScanFinished)
-            .unwrap_or_default();
+        status_mgr.lock().unwrap().finish_scan();
         done_sender.send(()).unwrap_or_default();
     });
 
     done_receiver
 }
 
-type HashFunc = fn(&DynamicImage) -> u64;
-type MsgFunc = fn(Arc<PathBuf>, u64) -> StatusMgrMsg;
-
 fn start_hasher(
-    hash_func: HashFunc,
-    msg_func: MsgFunc,
-    status_sndr: Sender<StatusMgrMsg>,
+    hasher: impl Hasher,
+    status_mgr: Arc<Mutex<StatusMgr>>,
 ) -> (Sender<(Arc<PathBuf>, Arc<DynamicImage>)>, Receiver<()>) {
-    let (image_sender, image_receiver) = crossbeam_channel::bounded(10);
+    let (image_sender, image_receiver) : (Sender<(Arc<PathBuf>, Arc<DynamicImage>)>, Receiver<(Arc<PathBuf>, Arc<DynamicImage>)>)
+        = crossbeam_channel::bounded(10);
     let (done_sender, done_receiver) = crossbeam_channel::bounded(1);
 
     thread::spawn(move || {
         for (pathbuf, shared_image) in image_receiver {
-            let hash = hash_func(Arc::as_ref(&shared_image));
-            status_sndr.send(msg_func(pathbuf, hash)).unwrap();
+            let hash = hasher.hash(&shared_image.as_ref());
+            hasher.hash_setter(&mut *status_mgr.lock().unwrap(), &pathbuf, hash);
         }
         done_sender.send(())
     });

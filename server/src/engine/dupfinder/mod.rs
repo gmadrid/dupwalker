@@ -1,10 +1,9 @@
 use crate::engine::first_or_default;
-use crate::engine::status_mgr::StatusMgrMsg::GetImageData;
-use crate::engine::status_mgr::{ImageData, StatusMgrMsg};
-use crossbeam_channel::{Receiver, Sender};
+use crate::engine::status_mgr::{ImageData, StatusMgr};
+use crossbeam_channel::{Receiver};
 use std::cmp::{max, min};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 struct DupFinderMap<G: Fn(&ImageData) -> Option<u64>> {
@@ -32,7 +31,7 @@ impl<G: Fn(&ImageData) -> Option<u64>> DupFinderMap<G> {
         }
     }
 
-    pub fn add_image(&mut self, path: &Path, image_data: &ImageData) -> Option<u64>{
+    pub fn add_image(&mut self, path: &Path, image_data: &ImageData) -> Option<u64> {
         if let Some(hash) = (self.hash_getter)(image_data) {
             let bit_count = count_bits(hash);
             let v = &mut self.lookup[bit_count as usize];
@@ -74,26 +73,20 @@ struct FileInfo {
 
 const HAMMING_DISTANCE: u8 = 3;
 
-pub fn start(hasher_done_recv: Receiver<()>, status_sndr: Sender<StatusMgrMsg>) -> Receiver<()> {
+pub fn start(hasher_done_recv: Receiver<()>, status_mgr: Arc<Mutex<StatusMgr>>) -> Receiver<()> {
     let (done_sender, done_receiver) = crossbeam_channel::bounded(1);
 
     thread::spawn(move || {
         // Wait for the hasher to be done.
         first_or_default(hasher_done_recv);
 
-        let (filenames_sndr, filenames_recv) = crossbeam_channel::bounded(1);
-        status_sndr
-            .send(StatusMgrMsg::FilesRequest(filenames_sndr))
-            .unwrap();
+        let filenames: Vec<PathBuf> = status_mgr.lock().unwrap().data.keys().cloned().collect();
 
-        let filenames = first_or_default(filenames_recv);
         let mut map = DupFinderMap::new(|id| id.a_hash);
         let mut fns_with_hashes = Vec::<(PathBuf, u64)>::new();
         for filename in &filenames {
-            let (id_sndr, id_recv) = crossbeam_channel::bounded(1);
             let afn = Arc::new(filename.clone());
-            status_sndr.send(GetImageData(afn, id_sndr)).unwrap();
-            let image_data = first_or_default(id_recv).unwrap_or_default();
+            let image_data = status_mgr.lock().unwrap().get_image_data(&afn).cloned().unwrap_or_default();
             if let Some(hsh) = map.add_image(filename, &image_data) {
                 fns_with_hashes.push((filename.to_path_buf(), hsh));
             }
