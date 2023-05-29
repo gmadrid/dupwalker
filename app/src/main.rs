@@ -1,6 +1,6 @@
 use app::*;
 use gloo_net::http::Request;
-use shared::{DWComparingStatus, DWScanningStatus, DWStatus};
+use shared::{DWComparingStatus, DWReadyStatus, DWScanningStatus, DWStatus};
 use yew::prelude::*;
 use yew_hooks::use_interval;
 
@@ -38,7 +38,7 @@ fn DWBody() -> Html {
                     state3.set(foobar);
                 });
             },
-            if !matches!(*state, DWStatus::Initializing | DWStatus::Scanning(_)) {
+            if matches!(*state, DWStatus::Ready(_)) {
                 0
             } else {
                 500
@@ -54,9 +54,7 @@ fn dwstatus_summary(status: &DWStatus) -> Html {
         DWStatus::Initializing => html! {},
         DWStatus::Scanning(scanning) => dwscanning_summary(scanning),
         DWStatus::Comparing(comparing) => dwcomparing_summary(comparing),
-        DWStatus::Ready => {
-            html! { <b>{"Ready placeholder"}</b>}
-        }
+        DWStatus::Ready(ready) => dwready_summary(ready),
     };
     html! {
         <>
@@ -105,6 +103,10 @@ fn dwscanning_summary(scanning: &DWScanningStatus) -> Html {
           </div>
         </div>
     }
+}
+
+fn dwready_summary(ready: &DWReadyStatus) -> Html {
+    html! { <h1>{"Ready!"}</h1> }
 }
 
 #[function_component]

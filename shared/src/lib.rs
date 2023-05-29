@@ -7,7 +7,7 @@ pub enum DWStatus {
     Initializing,
     Scanning(DWScanningStatus),
     Comparing(DWComparingStatus),
-    Ready,
+    Ready(DWReadyStatus),
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -20,4 +20,9 @@ pub struct DWScanningStatus {
 pub struct DWComparingStatus {
     pub total_images: usize,
     pub image_scanning: usize,
+}
+
+#[derive(Default, Serialize, Deserialize)]
+pub struct DWReadyStatus {
+
 }
